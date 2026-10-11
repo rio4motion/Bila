@@ -4,7 +4,6 @@
 #include "imgui_impl_opengl3.h"
 
 namespace ImGuiLayer {
-    // A "struct" bundles related values into one thing.
     struct SceneObject {
         const char* name;
         float position[3];
@@ -12,7 +11,6 @@ namespace ImGuiLayer {
         float scale[3];
     };
 
-    // Fake objects for now. "static" keeps the values between frames.
     static SceneObject objects[] = {
         { "Cube",   {0, 0, 0}, {0, 0, 0}, {1, 1, 1} },
         { "Sphere", {2, 0, 0}, {0, 0, 0}, {1, 1, 1} },
@@ -20,6 +18,9 @@ namespace ImGuiLayer {
         { "Light",  {0, 5, 0}, {0, 0, 0}, {1, 1, 1} },
     };
     static int selected = 0;
+
+    // The text typed in the Code panel (a "char array" holds text, 4096 letters max)
+    static char code[4096] = "// Write Bila C++ here\n";
 
     void init(GLFWwindow* window) {
         IMGUI_CHECKVERSION();
@@ -55,6 +56,7 @@ namespace ImGuiLayer {
 
         ImGuiViewport* vp = ImGui::GetMainViewport();
         float panelW = 250.0f;
+        float codeH = 220.0f;
         ImGuiWindowFlags flags =
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 
@@ -78,6 +80,17 @@ namespace ImGuiLayer {
         ImGui::DragFloat3("Position", obj.position, 0.1f);
         ImGui::DragFloat3("Rotation", obj.rotation, 1.0f);
         ImGui::DragFloat3("Scale", obj.scale, 0.05f);
+        ImGui::End();
+
+        // Bottom panel: code editor (sits between the left and right panels)
+        ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + panelW, vp->WorkPos.y + vp->WorkSize.y - codeH));
+        ImGui::SetNextWindowSize(ImVec2(vp->WorkSize.x - 2 * panelW, codeH));
+        ImGui::Begin("Code", nullptr, flags);
+        if (ImGui::Button("Run")) {
+            // Does nothing yet
+        }
+        ImGui::InputTextMultiline("##code", code, sizeof(code),
+            ImVec2(-1, -1), ImGuiInputTextFlags_AllowTabInput);
         ImGui::End();
     }
 

@@ -37,10 +37,24 @@ add_library(imgui_lib STATIC
 target_include_directories(imgui_lib PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui_lib PUBLIC glfw OpenGL::GL)
 
+# imnodes = the node editor library. SOURCE_SUBDIR stops CMake from using its own build file.
+FetchContent_Declare(
+    imnodes
+    GIT_REPOSITORY https://github.com/Nelarius/imnodes.git
+    GIT_TAG v0.5
+    SOURCE_SUBDIR do_not_build
+)
+FetchContent_MakeAvailable(imnodes)
+
+add_library(imnodes_lib STATIC ${imnodes_SOURCE_DIR}/imnodes.cpp)
+target_include_directories(imnodes_lib PUBLIC ${imnodes_SOURCE_DIR})
+target_link_libraries(imnodes_lib PUBLIC imgui_lib)
+target_compile_definitions(imnodes_lib PRIVATE IMGUI_DEFINE_MATH_OPERATORS)
+
 add_executable(Bila
     src/main.cpp
     src/renderer/Rendering.cpp
     UI/ImGuiLayer.cpp
 )
 target_include_directories(Bila PRIVATE src UI)
-target_link_libraries(Bila PRIVATE glfw OpenGL::GL imgui_lib)
+target_link_libraries(Bila PRIVATE glfw OpenGL::GL imgui_lib imnodes_lib)
