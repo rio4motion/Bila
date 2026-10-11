@@ -1,7 +1,8 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include "renderer/Renderer.h"
-#include "ImGuiLayer.h"                // NEW
+#include "ImGuiLayer.h"
+#include "Viewport.h"                  // NEW
 
 int main() {
     if (!glfwInit()) {
@@ -20,7 +21,7 @@ int main() {
 
     Renderer renderer;
     renderer.init();
-    ImGuiLayer::init(window);          // NEW
+    ImGuiLayer::init(window);
 
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
@@ -32,13 +33,14 @@ int main() {
         glfwGetFramebufferSize(window, &w, &h);
         renderer.resize(w, h);
 
-        renderer.renderFrame();
-        ImGuiLayer::beginFrame();      // NEW
-        ImGuiLayer::endFrame();        // NEW
+        ImGuiLayer::beginFrame();      // builds the panels and reads the mouse / keyboard
+        Viewport::update();            // NEW: camera, selecting, extrude... (changed order!)
+        renderer.renderFrame();        // draws the 3D scene
+        ImGuiLayer::endFrame();        // draws the panels on top
         glfwSwapBuffers(window);
     }
 
-    ImGuiLayer::shutdown();            // NEW (counted as the 4th line above)
+    ImGuiLayer::shutdown();
     renderer.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();

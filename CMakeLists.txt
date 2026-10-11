@@ -26,13 +26,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(imgui)
 
 add_library(imgui_lib STATIC
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/imgui_demo.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+${imgui_SOURCE_DIR}/imgui.cpp
+${imgui_SOURCE_DIR}/imgui_draw.cpp
+${imgui_SOURCE_DIR}/imgui_tables.cpp
+${imgui_SOURCE_DIR}/imgui_widgets.cpp
+${imgui_SOURCE_DIR}/imgui_demo.cpp
+${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui_lib PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui_lib PUBLIC glfw OpenGL::GL)
@@ -53,6 +53,7 @@ target_compile_definitions(imnodes_lib PRIVATE IMGUI_DEFINE_MATH_OPERATORS)
 
 add_executable(Bila
     src/main.cpp
+    src/Viewport.cpp
     src/renderer/Rendering.cpp
     UI/ImGuiLayer.cpp
 )
