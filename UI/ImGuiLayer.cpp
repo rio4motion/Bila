@@ -1,11 +1,13 @@
-0
-
 #include "ImGuiLayer.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
 namespace ImGuiLayer {
+    // Fake objects for now. "static" keeps the value between frames.
+    static const char* objects[] = { "Cube", "Sphere", "Camera", "Light" };
+    static int selected = 0;
+
     void init(GLFWwindow* window) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -38,14 +40,26 @@ namespace ImGuiLayer {
             ImGui::EndMainMenuBar();
         }
 
-        // Right side panel (fixed in place)
         ImGuiViewport* vp = ImGui::GetMainViewport();
-        float panelW = 300.0f;
+        float panelW = 250.0f;
+        ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+
+        // Left panel: object list
+        ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x, vp->WorkPos.y));
+        ImGui::SetNextWindowSize(ImVec2(panelW, vp->WorkSize.y));
+        ImGui::Begin("Scene", nullptr, flags);
+        for (int i = 0; i < 4; i++) {
+            if (ImGui::Selectable(objects[i], selected == i))
+                selected = i;
+        }
+        ImGui::End();
+
+        // Right panel: properties of the selected object
         ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - panelW, vp->WorkPos.y));
         ImGui::SetNextWindowSize(ImVec2(panelW, vp->WorkSize.y));
-        ImGui::Begin("Properties", nullptr,
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-        ImGui::Text("Object properties go here");
+        ImGui::Begin("Properties", nullptr, flags);
+        ImGui::Text("Selected: %s", objects[selected]);
         ImGui::End();
     }
 
