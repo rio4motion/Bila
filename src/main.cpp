@@ -1,6 +1,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include "renderer/Renderer.h"
+#include "ImGuiLayer.h"                // NEW
 
 int main() {
     if (!glfwInit()) {
@@ -15,10 +16,11 @@ int main() {
         return 1;
     }
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);  // vsync
+    glfwSwapInterval(1);
 
     Renderer renderer;
     renderer.init();
+    ImGuiLayer::init(window);          // NEW
 
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
@@ -31,9 +33,12 @@ int main() {
         renderer.resize(w, h);
 
         renderer.renderFrame();
+        ImGuiLayer::beginFrame();      // NEW
+        ImGuiLayer::endFrame();        // NEW
         glfwSwapBuffers(window);
     }
 
+    ImGuiLayer::shutdown();            // NEW (counted as the 4th line above)
     renderer.shutdown();
     glfwDestroyWindow(window);
     glfwTerminate();
