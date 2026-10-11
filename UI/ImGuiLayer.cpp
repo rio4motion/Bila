@@ -1,7 +1,10 @@
 #include "ImGuiLayer.h"
 #include "imgui.h"
+#include "imnodes.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include <vector>
+#include <utility>
 
 namespace ImGuiLayer {
     struct SceneObject {
@@ -18,15 +21,83 @@ namespace ImGuiLayer {
         { "Light",  {0, 5, 0}, {0, 0, 0}, {1, 1, 1} },
     };
     static int selected = 0;
-
-    // The text typed in the Code panel (a "char array" holds text, 4096 letters max)
     static char code[4096] = "// Write Bila C++ here\n";
+
+    // Blueprint editor data
+    static bool showBlueprint = false;
+    static std::vector<std::pair<int, int>> links;
 
     void init(GLFWwindow* window) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
+        ImNodes::CreateContext();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 130");
+    }
+
+    static void drawBlueprintEditor() {
+        if (!showBlueprint) return;
+
+        ImGui::SetNextWindowSize(ImVec2(700, 400), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Blueprint Editor", &showBlueprint);
+
+        static bool firstTime = true;
+        static float number = 5.0f;
+
+        ImNodes::BeginNodeEditor();
+
+        // Node 1: On Start
+        ImNodes::BeginNode(1);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("On Start");
+        ImNodes::EndNodeTitleBar();
+        ImNodes::BeginOutputAttribute(11);
+        ImGui::Text("Run >");
+        ImNodes::EndOutputAttribute();
+        ImNodes::EndNode();
+
+        // Node 2: Number
+        ImNodes::BeginNode(2);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Number");
+        ImNodes::EndNodeTitleBar();
+        ImNodes::BeginOutputAttribute(21);
+        ImGui::PushItemWidth(80);
+        ImGui::DragFloat("##number", &number, 0.1f);
+        ImGui::PopItemWidth();
+        ImNodes::EndOutputAttribute();
+        ImNodes::EndNode();
+
+        // Node 3: Set Position
+        ImNodes::BeginNode(3);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Set Position");
+        ImNodes::EndNodeTitleBar();
+        ImNodes::BeginInputAttribute(31);
+        ImGui::Text("> Start");
+        ImNodes::EndInputAttribute();
+        ImNodes::BeginInputAttribute(32);
+        ImGui::Text("X value");
+        ImNodes::EndInputAttribute();
+        ImNodes::EndNode();
+
+        for (int i = 0; i < (int)links.size(); i++)
+            ImNodes::Link(i, links[i].first, links[i].second);
+
+        ImNodes::EndNodeEditor();
+
+        if (firstTime) {
+            ImNodes::SetNodeGridSpacePos(1, ImVec2(20, 40));
+            ImNodes::SetNodeGridSpacePos(2, ImVec2(20, 160));
+            ImNodes::SetNodeGridSpacePos(3, ImVec2(300, 80));
+            firstTime = false;
+        }
+
+        int startId, endId;
+        if (ImNodes::IsLinkCreated(&startId, &endId))
+            links.push_back({ startId, endId });
+
+        ImGui::End();
     }
 
     void beginFrame() {
@@ -34,7 +105,6 @@ namespace ImGuiLayer {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // Top menu bar
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 ImGui::MenuItem("New");
@@ -49,6 +119,7 @@ namespace ImGuiLayer {
             }
             if (ImGui::BeginMenu("View")) {
                 ImGui::MenuItem("Wireframe");
+                ImGui::MenuItem("Blueprint Editor", nullptr, &showBlueprint);
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -70,7 +141,7 @@ namespace ImGuiLayer {
         }
         ImGui::End();
 
-        // Right panel: properties of the selected object
+        // Right panel: properties
         ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - panelW, vp->WorkPos.y));
         ImGui::SetNextWindowSize(ImVec2(panelW, vp->WorkSize.y));
         ImGui::Begin("Properties", nullptr, flags);
@@ -82,7 +153,7 @@ namespace ImGuiLayer {
         ImGui::DragFloat3("Scale", obj.scale, 0.05f);
         ImGui::End();
 
-        // Bottom panel: code editor (sits between the left and right panels)
+        // Bottom panel: code editor
         ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + panelW, vp->WorkPos.y + vp->WorkSize.y - codeH));
         ImGui::SetNextWindowSize(ImVec2(vp->WorkSize.x - 2 * panelW, codeH));
         ImGui::Begin("Code", nullptr, flags);
@@ -92,6 +163,8 @@ namespace ImGuiLayer {
         ImGui::InputTextMultiline("##code", code, sizeof(code),
             ImVec2(-1, -1), ImGuiInputTextFlags_AllowTabInput);
         ImGui::End();
+
+        drawBlueprintEditor();
     }
 
     void endFrame() {
@@ -102,6 +175,7 @@ namespace ImGuiLayer {
     void shutdown() {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
+        ImNodes::DestroyContext();
         ImGui::DestroyContext();
     }
 }
