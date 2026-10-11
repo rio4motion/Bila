@@ -4,8 +4,21 @@
 #include "imgui_impl_opengl3.h"
 
 namespace ImGuiLayer {
-    // Fake objects for now. "static" keeps the value between frames.
-    static const char* objects[] = { "Cube", "Sphere", "Camera", "Light" };
+    // A "struct" bundles related values into one thing.
+    struct SceneObject {
+        const char* name;
+        float position[3];
+        float rotation[3];
+        float scale[3];
+    };
+
+    // Fake objects for now. "static" keeps the values between frames.
+    static SceneObject objects[] = {
+        { "Cube",   {0, 0, 0}, {0, 0, 0}, {1, 1, 1} },
+        { "Sphere", {2, 0, 0}, {0, 0, 0}, {1, 1, 1} },
+        { "Camera", {0, 2, 5}, {0, 0, 0}, {1, 1, 1} },
+        { "Light",  {0, 5, 0}, {0, 0, 0}, {1, 1, 1} },
+    };
     static int selected = 0;
 
     void init(GLFWwindow* window) {
@@ -50,7 +63,7 @@ namespace ImGuiLayer {
         ImGui::SetNextWindowSize(ImVec2(panelW, vp->WorkSize.y));
         ImGui::Begin("Scene", nullptr, flags);
         for (int i = 0; i < 4; i++) {
-            if (ImGui::Selectable(objects[i], selected == i))
+            if (ImGui::Selectable(objects[i].name, selected == i))
                 selected = i;
         }
         ImGui::End();
@@ -59,7 +72,12 @@ namespace ImGuiLayer {
         ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x - panelW, vp->WorkPos.y));
         ImGui::SetNextWindowSize(ImVec2(panelW, vp->WorkSize.y));
         ImGui::Begin("Properties", nullptr, flags);
-        ImGui::Text("Selected: %s", objects[selected]);
+        SceneObject& obj = objects[selected];
+        ImGui::Text("Selected: %s", obj.name);
+        ImGui::Separator();
+        ImGui::DragFloat3("Position", obj.position, 0.1f);
+        ImGui::DragFloat3("Rotation", obj.rotation, 1.0f);
+        ImGui::DragFloat3("Scale", obj.scale, 0.05f);
         ImGui::End();
     }
 
