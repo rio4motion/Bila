@@ -1,6 +1,7 @@
 #pragma once
 #include "Math.h"
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <utility>
 #include <vector>
@@ -15,12 +16,15 @@ struct Mesh {
     std::vector<char> vsel;
     std::vector<char> fsel;
 
+    static constexpr float kPi = 3.14159265f;
+
     // ---------- basics ----------
     static Vec3 normalOf(const std::vector<Vec3>& verts, const Face& face) {
         Vec3 n;
         int cnt = (int)face.size();
         for (int i = 0; i < cnt; i++) {
-            Vec3 a = verts[face[i]], b = verts[face[(i + 1) % cnt]];
+            const Vec3& a = verts[face[i]];
+            const Vec3& b = verts[face[(i + 1) % cnt]];
             n.x += (a.y - b.y) * (a.z + b.z);
             n.y += (a.z - b.z) * (a.x + b.x);
             n.z += (a.x - b.x) * (a.y + b.y);
@@ -33,6 +37,12 @@ struct Mesh {
         for (int id : f[i]) c += v[id];
         return c / (float)f[i].size();
     }
+    // How many triangles the renderer needs (a face with n points = n-2 triangles).
+    int triangleCount() const {
+        int t = 0;
+        for (const Face& face : f) if (face.size() >= 3) t += (int)face.size() - 2;
+        return t;
+    }
 
     // Adds a face and flips it if needed so it points away from "awayFrom".
     void addFace(Face face, Vec3 awayFrom) {
@@ -40,7 +50,7 @@ struct Mesh {
         for (int id : face) c += v[id];
         c = c / (float)face.size();
         if (dot(normalOf(v, face), c - awayFrom) < 0) std::reverse(face.begin(), face.end());
-        f.push_back(face);
+        f.push_back(std::move(face));
     }
 
     // ---------- selection ----------
@@ -128,19 +138,21 @@ struct Mesh {
 
     void removeFaces(const std::vector<char>& kill) {
         std::vector<Face> keep;
+        keep.reserve(f.size());
         for (size_t i = 0; i < f.size(); i++)
-            if (!kill[i]) keep.push_back(f[i]);
-        f = keep;
+            if (!kill[i]) keep.push_back(std::move(f[i]));
+        f = std::move(keep);
 
         // throw away points that no face uses any more
         std::vector<int> remap(v.size(), -1);
         std::vector<Vec3> nv;
+        nv.reserve(v.size());
         for (Face& face : f)
             for (int& id : face) {
                 if (remap[id] < 0) { remap[id] = (int)nv.size(); nv.push_back(v[id]); }
                 id = remap[id];
             }
-        v = nv;
+        v = std::move(nv);
         resetSelection();
     }
     // faceMode: delete selected faces. Otherwise delete every face touching a selected point.
@@ -176,6 +188,8 @@ struct Mesh {
     // A flat sheet cut into n x n squares
     static Mesh grid(int n = 4) {
         Mesh m;
+        m.v.reserve((size_t)(n + 1) * (n + 1));
+        m.f.reserve((size_t)n * n);
         for (int j = 0; j <= n; j++)
             for (int i = 0; i <= n; i++)
                 m.v.push_back({-0.5f + (float)i / n, 0.0f, -0.5f + (float)j / n});
@@ -189,13 +203,14 @@ struct Mesh {
 
     static Mesh sphere(int segs = 16, int rings = 10) {
         Mesh m;
-        const float pi = 3.14159265f;
+        m.v.reserve((size_t)segs * (rings - 1) + 2);
+        m.f.reserve((size_t)segs * rings);
         m.v.push_back({0, 0.5f, 0});    // 0 = top
         m.v.push_back({0, -0.5f, 0});   // 1 = bottom
         for (int r = 1; r < rings; r++) {
-            float phi = pi * (float)r / rings;
+            float phi = kPi * (float)r / rings;
             for (int s = 0; s < segs; s++) {
-                float th = 2 * pi * (float)s / segs;
+                float th = 2 * kPi * (float)s / segs;
                 m.v.push_back({0.5f * std::sin(phi) * std::cos(th), 0.5f * std::cos(phi),
                                0.5f * std::sin(phi) * std::sin(th)});
             }
@@ -212,13 +227,12 @@ struct Mesh {
 
     static Mesh cylinder(int n = 16) {
         Mesh m;
-        const float pi = 3.14159265f;
         for (int i = 0; i < n; i++) {
-            float a = 2 * pi * (float)i / n;
+            float a = 2 * kPi * (float)i / n;
             m.v.push_back({0.5f * std::cos(a), -0.5f, 0.5f * std::sin(a)});
         }
         for (int i = 0; i < n; i++) {
-            float a = 2 * pi * (float)i / n;
+            float a = 2 * kPi * (float)i / n;
             m.v.push_back({0.5f * std::cos(a), 0.5f, 0.5f * std::sin(a)});
         }
         for (int i = 0; i < n; i++)
@@ -233,9 +247,8 @@ struct Mesh {
 
     static Mesh cone(int n = 16) {
         Mesh m;
-        const float pi = 3.14159265f;
         for (int i = 0; i < n; i++) {
-            float a = 2 * pi * (float)i / n;
+            float a = 2 * kPi * (float)i / n;
             m.v.push_back({0.5f * std::cos(a), -0.5f, 0.5f * std::sin(a)});
         }
         m.v.push_back({0, 0.5f, 0});   // tip
@@ -250,19 +263,18 @@ struct Mesh {
 
     static Mesh torus(int bigSegs = 24, int smallSegs = 12) {
         Mesh m;
-        const float pi = 3.14159265f;
         const float R = 0.35f, r = 0.15f;
         for (int i = 0; i < bigSegs; i++) {
-            float th = 2 * pi * (float)i / bigSegs;
+            float th = 2 * kPi * (float)i / bigSegs;
             for (int j = 0; j < smallSegs; j++) {
-                float ph = 2 * pi * (float)j / smallSegs;
+                float ph = 2 * kPi * (float)j / smallSegs;
                 float d = R + r * std::cos(ph);
                 m.v.push_back({d * std::cos(th), r * std::sin(ph), d * std::sin(th)});
             }
         }
         auto id = [=](int i, int j) { return (i % bigSegs) * smallSegs + (j % smallSegs); };
         for (int i = 0; i < bigSegs; i++) {
-            float thm = 2 * pi * ((float)i + 0.5f) / bigSegs;
+            float thm = 2 * kPi * ((float)i + 0.5f) / bigSegs;
             Vec3 tubeCenter{R * std::cos(thm), 0, R * std::sin(thm)};
             for (int j = 0; j < smallSegs; j++)
                 m.addFace({id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j + 1)}, tubeCenter);

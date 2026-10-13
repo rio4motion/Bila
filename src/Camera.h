@@ -2,7 +2,6 @@
 #include "Math.h"
 #include <algorithm>
 
-// An orbit camera: it circles around a target point, like Blender's viewport.
 struct Camera {
     Vec3 target{0.0f, 0.5f, 0.0f};
     float distance = 8.0f;   // how far from the target
